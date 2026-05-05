@@ -21,8 +21,8 @@ public:
     eeros::safety::SafetyEvent emergencyOver;
     eeros::safety::SafetyEvent startDriving;
     eeros::safety::SafetyEvent startBraking;
-    eeros::safety::SafetyEvent stopParking;
-    eeros::safety::SafetyEvent startParking;
+    // eeros::safety::SafetyEvent stopParking;
+    // eeros::safety::SafetyEvent startParking;
 
 
 
@@ -37,17 +37,17 @@ public:
     eeros::safety::SafetyLevel slEmergency;
     eeros::safety::SafetyLevel slDriving;
     eeros::safety::SafetyLevel slBraking;
-    eeros::safety::SafetyLevel slParking;
+    // eeros::safety::SafetyLevel slParking;
 
 
 private:
     // Define all critical outputs
-    eeros::hal::Output<bool>* onBoardLEDgreen;
-    eeros::hal::Output<bool>* onBoardLEDred;
+    eeros::hal::Output<bool>* greenLED;
+    eeros::hal::Output<bool>* redLED;
 
     // Define all critical inputs
-    eeros::hal::Input<bool>* onBoardButtonPause;
-    eeros::hal::Input<bool>* onBoardButtonMode;
+    eeros::hal::Input<bool>* buttonPause;
+    eeros::hal::Input<bool>* buttonMode;
 
     ControlSystem &cs;
 };

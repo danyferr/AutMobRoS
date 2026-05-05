@@ -9,7 +9,6 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
       slEmergency("Emergency state"),
       slSystemOn("System is online"),
       slMotorPowerOn("Motor power is on"),
-      slParking("Parking"),
       slBraking("Braking"),
       slDriving("Driving"),
 
@@ -22,9 +21,9 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
       emergencyOn("Emergency triggered"),
       emergencyOver("Emergency over"),
       startDriving("Start driving"),
-      startBraking("Start braking"),
-      stopParking("Stop parking"),
-      startParking("Start parking"),
+      startBraking("Start braking")
+
+
 {
     eeros::hal::HAL &hal = eeros::hal::HAL::instance();
 
@@ -47,31 +46,24 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
     addLevel(slEmergency);
     addLevel(slSystemOn);
     addLevel(slMotorPowerOn);
-    addLevel(slParking);
     addLevel(slBraking);
     addLevel(slDriving);
 
 
     // Add events to individual safety levels
     slSystemOff.addEvent(doSystemOn, slSwitchingOn, kPublicEvent);
-    // slSystemOn.addEvent(doSystemOff, slSwitchingOff, kPublicEvent);
     slSwitchingOff.addEvent(systemOff, slSystemOff, kPublicEvent);
     slSwitchingOn.addEvent(systemOn, slSystemOn, kPublicEvent);
-    // slEmergency.addEvent(doSystemOff, slSwitchingOff, kPublicEvent);
-    slSystemOn.addEvent(doPowerMotorOn, slMotorPowerOn, kPublicEvent);
+    slSystemOn.addEvent(doMotorPowerOn, slMotorPowerOn, kPublicEvent);
     slMotorPowerOn.addEvent(doMotorPowerOff, slSystemOn, kPublicEvent);
-    slSystemOn.addEvent(emergencyOn, slEmergency, kPublicEvent);
-    slMotorPowerOn.addEvent(emergencyOn, slEmergency, kPublicEvent);
-    slParking.addEvent(emergencyOn, slEmergency, kPublicEvent);
     slMotorPowerOn.addEvent(startDriving, slDriving, kPublicEvent);
     slDriving.addEvent(startBraking, slBraking, kPublicEvent);
     slBraking.addEvent(startDriving, slDriving, kPublicEvent);
-    slBraking.addEvent(startParking, slParking, kPublicEvent);
-    slParking.addEvent(stopParking, slMotorPowerOn, kPublicEvent);
+
 
     // Add events to multiple safety levels
-    addEventToAllLevelsBetween(slEmergency, slSystemOn, slMotorPowerOn, slParking, doSystemOff, slSwitchingOff, kPublicEvent);
-    addEventToAllLevelsBetween(slSystemOn, slMotorPowerOn, slParking, emergencyOn, slEmergency, kPublicEvent);
+    addEventToAllLevelsBetween(slEmergency, slMotorPowerOn, doSystemOff, slSwitchingOff, kPublicEvent);
+    addEventToAllLevelsBetween(slSystemOn, slMotorPowerOn, emergencyOn, slEmergency, kPublicEvent);
 
 
     // Define input actions for all levels
@@ -79,12 +71,11 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
     slSwitchingOff.setInputActions({        ignore(buttonPause),                    ignore(buttonMode) });
     slBraking.setInputActions({             ignore(buttonPause),                    ignore(buttonMode) });
     slSwitchingOn.setInputActions({         ignore(buttonPause),                    ignore(buttonMode) });
-    slEmergency.setInputActions({           ignore(buttonPause),                    check(buttonMode, true, emergencyOver) });
-    slSystemOn.setInputActions({            check(buttonPause, true, emergency),    ignore(buttonMode) });
-    slMotorPowerOn.setInputActions({        check(buttonPause, true, emergency),    ignore(buttonMode) });
-    slParking.setInputActions({             check(buttonPause, true, emergency),    ignore(buttonMode) });
+    slEmergency.setInputActions({           ignore(buttonPause),                    check(buttonMode, false, emergencyOver) });
+    slSystemOn.setInputActions({            check(buttonPause, false, emergencyOn),    ignore(buttonMode) });
+    slMotorPowerOn.setInputActions({        check(buttonPause, false, emergencyOn),    ignore(buttonMode) });
     slBraking.setInputActions({             ignore(buttonPause),                    ignore(buttonMode) });
-    slDriving.setInputActions({             check(buttonPause, true, startBraking), ignore(buttonMode) });
+    slDriving.setInputActions({             check(buttonPause, false, startBraking), ignore(buttonMode) });
 
 
     // Define output actions for all levels
@@ -95,7 +86,6 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
     slSystemOn.setOutputActions({            set(greenLED, true),    set(redLED, false) });
     slMotorPowerOn.setOutputActions({        set(greenLED, true),    set(redLED, false) });
     slDriving.setOutputActions({             set(greenLED, true),    set(redLED, false) });
-    slParking.setOutputActions({             set(greenLED, true),    set(redLED, false) });
     slBraking.setOutputActions({             set(greenLED, true),    set(redLED, false) });
 
     // Define and add level actions
@@ -104,9 +94,42 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &cs, double dt)
         eeros::Executor::stop();
     });
 
-    slSystemOn.setLevelAction([&](SafetyContext *privateContext) {
-        cs.timedomain.start();
+    slSwitchingOff.setLevelAction([&](SafetyContext *privateContext) {
+        cs.timedomain.stop();
+        privateContext->triggerEvent(systemOff);
     });
+
+    slSwitchingOn.setLevelAction([&](SafetyContext *privateContext) {
+        cs.timedomain.start();
+        privateContext->triggerEvent(systemOn);
+    });
+
+    slSystemOn.setLevelAction([&](SafetyContext *privateContext) {
+        if (slSystemOn.getNofActivations()*dt >= 1)
+        {
+            privateContext->triggerEvent(doMotorPowerOn);
+        }
+    });
+
+    slEmergency.setLevelAction([&](SafetyContext *privateContext) {
+        
+    });
+
+    slMotorPowerOn.setLevelAction([&](SafetyContext *privateContext) {
+        if (slMotorPowerOn.getNofActivations()*dt >= 5)
+        {
+            privateContext->triggerEvent(startDriving);
+        }
+    });
+
+    slDriving.setLevelAction([&](SafetyContext *privateContext) {
+        if (slDriving.getNofActivations()*dt >= 5)
+        {
+            privateContext->triggerEvent(startBraking);
+        }
+    });
+
+
 
     // Define entry level
     setEntryLevel(slSystemOff);
