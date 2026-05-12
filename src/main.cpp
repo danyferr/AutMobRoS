@@ -33,6 +33,7 @@ int main(int argc, char **argv)
     MyRobotSafetyProperties sp(cs, dt);
     eeros::safety::SafetySystem ss(sp, dt);
     cs.timedomain.registerSafetyEvent(ss, sp.doSystemOff); // fired if timedomain fails to run properly
+    cs.signalChecker.registerSafetyEvent(ss, sp.emergencyOn);
     signal(SIGINT, signalHandler);
 
     log.info() << "Initializing sequencer...";

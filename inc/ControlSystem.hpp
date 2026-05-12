@@ -20,6 +20,8 @@ public:
     PeripheralInput<> q1;
     Gain<> g;
     SignalChecker<> signalChecker;
+    Constant<> motorVoltageSetpoint;
+    PeripheralOutput<> motor;
 
     TimeDomain timedomain;
 };
