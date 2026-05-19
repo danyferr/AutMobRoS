@@ -8,7 +8,7 @@
 #include "MyRobotSafetyProperties.hpp"
 #include "MainSequence.hpp"
 
-void signalHandler(int signum)
+void signalHandler(int signum) // ctrl+c handling
 {
     eeros::safety::SafetySystem::exitHandler();
     eeros::sequencer::Sequencer::instance().abort();
